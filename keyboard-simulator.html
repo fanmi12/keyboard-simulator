@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>键盘输入模拟器</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --border: #334155;
+    --text: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --success: #22c55e;
+    --warning: #f59e0b;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 720px;
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 32px;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+    border: 1px solid var(--border);
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+
+  .subtitle {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    margin-bottom: 28px;
+  }
+
+  /* ---- Hero Card: Bookmarklet ---- */
+  .hero {
+    background: linear-gradient(135deg, #1e3a5f, #1a2740);
+    border: 2px dashed #3b82f6;
+    border-radius: 14px;
+    padding: 32px;
+    text-align: center;
+    margin-bottom: 28px;
+  }
+
+  .hero h2 {
+    font-size: 1.2rem;
+    margin-bottom: 8px;
+    color: #fff;
+  }
+
+  .hero p {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+
+  .bookmarklet-btn {
+    display: inline-block;
+    padding: 16px 40px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 700;
+    border-radius: 10px;
+    cursor: grab;
+    text-decoration: none;
+    transition: all 0.2s;
+    box-shadow: 0 4px 20px rgba(59,130,246,0.4);
+    user-select: none;
+    -webkit-user-drag: element;
+  }
+
+  .bookmarklet-btn:hover {
+    background: var(--accent-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 28px rgba(59,130,246,0.6);
+  }
+
+  .bookmarklet-btn:active { cursor: grabbing; }
+
+  .drag-hint {
+    font-size: 0.75rem;
+    color: #f59e0b;
+    margin-top: 12px;
+    animation: blink 2s ease-in-out infinite;
+  }
+
+  @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+
+  /* ---- Steps ---- */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 24px;
+    text-align: center;
+  }
+
+  .step-item {
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 16px 12px;
+    border: 1px solid var(--border);
+  }
+
+  .step-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.8125rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+  }
+
+  .step-item p {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 28px 0;
+  }
+
+  /* ---- Advanced Section ---- */
+  .section-title {
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    font-weight: 600;
+  }
+
+  .editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .char-count {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 180px;
+    padding: 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 0.9375rem;
+    font-family: inherit;
+    line-height: 1.6;
+    resize: vertical;
+    transition: border-color 0.2s;
+  }
+
+  textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+  }
+
+  textarea::placeholder { color: #475569; }
+
+  .options {
+    display: flex;
+    gap: 16px;
+    margin: 16px 0;
+    flex-wrap: wrap;
+  }
+
+  .option-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+  }
+
+  .option-group input {
+    width: 60px;
+    padding: 5px 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 0.8125rem;
+    text-align: center;
+    font-family: inherit;
+  }
+
+  .option-group input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn {
+    padding: 11px 22px;
+    border-radius: 10px;
+    border: none;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    flex: 1;
+    min-width: 160px;
+    justify-content: center;
+  }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-secondary { background: var(--border); color: var(--text); }
+  .btn-secondary:hover { background: #475569; }
+  .btn-success { background: var(--success); color: #000; }
+  .btn-success:hover { background: #16a34a; }
+
+  .status {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    display: none;
+    align-items: flex-start;
+    gap: 8px;
+    line-height: 1.5;
+  }
+  .status.show { display: flex; }
+  .status.info  { background: rgba(59,130,246,0.12); color: #93c5fd; }
+  .status.success { background: rgba(34,197,94,0.12); color: #86efac; }
+  .status.warning { background: rgba(245,158,11,0.12); color: #fcd34d; }
+
+  .preview-box {
+    margin-top: 12px;
+    padding: 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    max-height: 180px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+  }
+
+  code {
+    background: var(--border);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    color: #e2e8f0;
+  }
+
+  @media (max-width: 600px) {
+    .steps { grid-template-columns: 1fr; }
+    .container { padding: 20px; }
+    .hero { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M6 16h.01M10 16h.01M14 16h.01"/></svg>
+    键盘输入模拟器
+  </h1>
+  <p class="subtitle">绕过网页粘贴限制，自动模拟逐字键盘输入 —— 只需拖拽一次，永久可用</p>
+
+  <!-- ====== HERO: Bookmarklet ====== -->
+  <div class="hero">
+    <h2>🚀 一键安装，永久使用</h2>
+    <p>把下面的蓝色按钮 <strong>拖到浏览器的书签栏</strong>，之后在任何网页点一下书签就能用。<br>不需要打开控制台，不需要 F12，不需要任何技术操作。</p>
+
+    <a class="bookmarklet-btn" id="bookmarkletLink" href="" draggable="true">
+      ⌨️ 模拟键盘输入
+    </a>
+    <div class="drag-hint">👆 拖这个按钮到书签栏（如果看不到书签栏，按 Ctrl+Shift+B 显示）</div>
+
+    <div class="steps">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <p>把上方蓝色按钮<strong>拖到书签栏</strong></p>
+      </div>
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <p>在任意网页<strong>点击书签</strong>，弹出编辑面板</p>
+      </div>
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <p>在面板中<strong>粘贴文字</strong>，点开始，倒计时后自动键入</p>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ====== Advanced: Console Script ====== -->
+  <div class="section-title">🔧 高级：生成控制台脚本（备用方案）</div>
+
+  <div class="editor-header">
+    <span style="font-size:0.8125rem;color:var(--text-secondary);">要输入的文本内容</span>
+    <span class="char-count" id="charCount">0 字</span>
+  </div>
+  <textarea id="contentInput" placeholder="输入或粘贴文字，点击下方按钮生成可注入目标页面的脚本……"></textarea>
+
+  <div class="options">
+    <div class="option-group">
+      <span>最小间隔</span>
+      <input type="number" id="minDelay" value="30" min="5" max="500" step="5">
+      <span>ms</span>
+    </div>
+    <div class="option-group">
+      <span>最大间隔</span>
+      <input type="number" id="maxDelay" value="80" min="10" max="1000" step="5">
+      <span>ms</span>
+    </div>
+    <div class="option-group">
+      <span>倒计时</span>
+      <input type="number" id="countdownSec" value="5" min="1" max="30">
+      <span>秒</span>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-primary" id="genBtn" onclick="generateConsoleScript()">生成并复制控制台脚本</button>
+    <button class="btn btn-secondary" onclick="copyTextOnly()">仅复制文本</button>
+  </div>
+  <div class="status" id="statusMsg"></div>
+
+  <details style="margin-top:16px;">
+    <summary style="cursor:pointer;font-size:0.8125rem;color:var(--text-secondary);">查看脚本内容</summary>
+    <div class="preview-box" id="scriptPreview"></div>
+  </details>
+</div>
+
+<script>
+  // ====== Bookmarklet generator ======
+  function buildBookmarklet() {
+    // The bookmarklet script - minified but functional
+    // It injects a floating editor panel into the current page
+    var script =
+`(function(){
+  if(document.getElementById('_kbr'))return;
+  var D=document,E=D.createElement('div');
+  E.id='_kbr';
+  E.innerHTML='<div id="_kbp" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2147483647;background:#1e293b;color:#e2e8f0;padding:22px;border-radius:14px;font-family:system-ui,sans-serif;width:420px;box-shadow:0 20px 60px rgba(0,0,0,.6);border:1px solid #334155;max-height:90vh;overflow-y:auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;cursor:move;" id="_kbh"><span style="font-weight:700;font-size:16px;">\\u2328\\ufe0f \\u952e\\u76d8\\u8f93\\u5165\\u6a21\\u62df\\u5668</span><button id="_kbx" style="background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;line-height:1;">&times;<\\/button><\\/div><textarea id="_kbt" placeholder="\\u5728\\u6b64\\u7c98\\u8d34\\u8981\\u8f93\\u5165\\u7684\\u6587\\u5b57\\u2026\\u2026" style="width:100%;height:140px;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:14px;font-family:inherit;resize:vertical;margin-bottom:12px;"><\\/textarea><div style="display:flex;gap:10px;margin-bottom:12px;font-size:12px;color:#94a3b8;flex-wrap:wrap;"><label>\\u95f4\\u9694 <input id="_kbn" value="30" style="width:52px;padding:4px;background:#0f172a;border:1px solid #334155;border-radius:4px;color:#e2e8f0;text-align:center;">-<input id="_kbx2" value="80" style="width:52px;padding:4px;background:#0f172a;border:1px solid #334155;border-radius:4px;color:#e2e8f0;text-align:center;">ms<\\/label><label>\\u5012\\u8ba1\\u65f6 <input id="_kbc" value="5" style="width:44px;padding:4px;background:#0f172a;border:1px solid #334155;border-radius:4px;color:#e2e8f0;text-align:center;"> \\u79d2<\\/label><\\/div><button id="_kbs" style="width:100%;padding:12px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;">\\u5f00\\u59cb\\u8f93\\u5165<\\/button><div id="_kbst" style="margin-top:10px;font-size:12px;color:#94a3b8;text-align:center;"><\\/div><\\/div>';
+  D.body.appendChild(E);
+
+  var P=D.getElementById('_kbp'),H=D.getElementById('_kbh'),dX=0,dY=0,rX=0,rY=0,drag=false;
+  H.onmousedown=function(e){drag=true;dX=e.clientX-P.offsetLeft;dY=e.clientY-P.offsetTop;e.preventDefault();};
+  D.onmousemove=function(e){if(!drag)return;P.style.left=(e.clientX-dX)+'px';P.style.top=(e.clientY-dY)+'px';P.style.transform='none';};
+  D.onmouseup=function(){drag=false;};
+
+  D.getElementById('_kbx').onclick=function(){E.remove();};
+  var typing=false,cancelled=false;
+
+  D.getElementById('_kbs').onclick=function(){
+    if(typing)return;
+    var tx=D.getElementById('_kbt').value;
+    if(!tx.trim())return;
+    typing=true;cancelled=false;
+    var mn=parseInt(D.getElementById('_kbn').value)||30;
+    var mx=parseInt(D.getElementById('_kbx2').value)||80;
+    var cd=parseInt(D.getElementById('_kbc').value)||5;
+
+    var B=D.createElement('div');
+    B.id='_kbb';
+    B.style.cssText='position:fixed;top:20px;right:20px;z-index:2147483647;background:#1e293b;color:#e2e8f0;padding:10px 16px;border-radius:10px;font-family:system-ui,sans-serif;font-size:14px;box-shadow:0 8px 30px rgba(0,0,0,.5);border:1px solid #334155;display:flex;align-items:center;gap:10px;';
+    B.innerHTML='<span id="_kbn2" style="font-size:26px;font-weight:900;color:#3b82f6;min-width:28px;text-align:center;">'+cd+'<\\/span><span style="color:#94a3b8;font-size:12px;">\\u79d2\\u540e\\u5f00\\u59cb \\u00b7 \\u70b9\\u51fb\\u8f93\\u5165\\u6846<\\/span><button id="_kbca" style="background:transparent;border:1px solid #475569;color:#94a3b8;padding:3px 8px;border-radius:4px;cursor:pointer;font-size:11px;">\\u53d6\\u6d88<\\/button>';
+    D.body.appendChild(B);
+    D.getElementById('_kbca').onclick=function(){cancelled=true;B.remove();typing=false;};
+
+    function tick(n){
+      if(cancelled){typing=false;return;}
+      if(n<=0){B.remove();setTimeout(function(){doType(tx,mn,mx);},300);return;}
+      D.getElementById('_kbn2').textContent=n;
+      setTimeout(function(){tick(n-1);},1000);
+    }
+    tick(cd);
+  };
+
+  function getEl(){
+    var a=D.activeElement;
+    if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.isContentEditable||a.getAttribute('contenteditable')==='true'))return a;
+    var cs=D.querySelectorAll('input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=checkbox]):not([type=radio]), textarea, [contenteditable=true]');
+    for(var i=0;i<cs.length;i++)if(cs[i].offsetParent)return cs[i];
+    return null;
+  }
+
+  async function doType(tx,mn,mx){
+    var el=getEl();
+    if(!el){alert('\\u672a\\u627e\\u5230\\u8f93\\u5165\\u6846\\uff0c\\u8bf7\\u5148\\u70b9\\u51fb\\u76ee\\u6807\\u8f93\\u5165\\u6846\\u540e\\u91cd\\u8bd5');typing=false;return;}
+    el.focus();
+    var chs=[...tx];
+    for(var i=0;i<chs.length;i++){
+      if(cancelled)break;
+      await typeCh(el,chs[i],mn,mx);
+    }
+    el.dispatchEvent(new Event('change',{bubbles:true}));
+    D.getElementById('_kbst').textContent='\\u2705 \\u8f93\\u5165\\u5b8c\\u6210\\uff0c\\u5171'+tx.length+'\\u5b57';
+    typing=false;
+  }
+
+  function typeCh(el,ch,mn,mx){
+    return new Promise(function(rs){
+      var d=Math.floor(Math.random()*(mx-mn+1))+mn;
+      setTimeout(function(){
+        el.focus();
+        var tag=el.tagName,isInp=tag==='INPUT'||tag==='TEXTAREA';
+        try{el.dispatchEvent(new KeyboardEvent('keydown',{key:ch,bubbles:true,cancelable:true,composed:true}));}catch(e){}
+        try{el.dispatchEvent(new KeyboardEvent('keypress',{key:ch,bubbles:true,cancelable:true,composed:true}));}catch(e){}
+        if(isInp){
+          var desc=Object.getOwnPropertyDescriptor(tag==='INPUT'?HTMLInputElement.prototype:HTMLTextAreaElement.prototype,'value');
+          var cur='';
+          try{cur=(desc&&desc.get?desc.get.call(el):el.value)||'';}catch(e){}
+          if(desc&&desc.set)desc.set.call(el,cur+ch);else el.value=cur+ch;
+          var len=(el.value||'').length;
+          if(typeof el.selectionStart==='number')el.selectionStart=el.selectionEnd=len;
+        }else{
+          try{D.execCommand('insertText',false,ch);}catch(e){
+            var tn=D.createTextNode(ch),sel=window.getSelection();
+            if(sel.rangeCount){var r=sel.getRangeAt(0);r.deleteContents();r.insertNode(tn);r.setStartAfter(tn);r.collapse(true);}
+            else el.appendChild(tn);
+          }
+        }
+        try{el.dispatchEvent(new InputEvent('input',{inputType:'insertText',data:ch,bubbles:true,cancelable:true,composed:true}));}catch(e){el.dispatchEvent(new Event('input',{bubbles:true}));}
+        try{el.dispatchEvent(new KeyboardEvent('keyup',{key:ch,bubbles:true,cancelable:true,composed:true}));}catch(e){}
+        rs();
+      },d);
+    });
+  }
+})();`;
+    return 'javascript:' + encodeURIComponent(script);
+  }
+
+  // Set the bookmarklet href
+  document.getElementById('bookmarkletLink').href = buildBookmarklet();
+
+  // Update bookmarklet link on hover to ensure it's fresh
+  document.getElementById('bookmarkletLink').addEventListener('mouseenter', function() {
+    this.href = buildBookmarklet();
+  });
+
+  // ====== Console Script Generator (advanced) ======
+  var contentInput = document.getElementById('contentInput');
+  var charCount = document.getElementById('charCount');
+  var statusMsg = document.getElementById('statusMsg');
+  var scriptPreview = document.getElementById('scriptPreview');
+
+  contentInput.addEventListener('input', function() {
+    charCount.textContent = contentInput.value.length + ' 字';
+    updatePreview();
+  });
+
+  ['minDelay','maxDelay','countdownSec'].forEach(function(id) {
+    document.getElementById(id).addEventListener('input', updatePreview);
+  });
+
+  function updatePreview() {
+    var text = contentInput.value.trim();
+    scriptPreview.textContent = text ? buildConsoleScript(text) : '// 请先输入内容……';
+  }
+
+  function getOptions() {
+    return {
+      minDelay: parseInt(document.getElementById('minDelay').value) || 30,
+      maxDelay: parseInt(document.getElementById('maxDelay').value) || 80,
+      countdownSec: parseInt(document.getElementById('countdownSec').value) || 5,
+    };
+  }
+
+  function showStatus(text, type) {
+    statusMsg.innerHTML = text;
+    statusMsg.className = 'status show ' + type;
+    setTimeout(function() { statusMsg.className = 'status'; }, 6000);
+  }
+
+  function buildConsoleScript(text) {
+    var opts = getOptions();
+    var escaped = JSON.stringify(text);
+    return (
+`(function(){
+var T=${escaped};
+var DMIN=${opts.minDelay};
+var DMAX=${opts.maxDelay};
+var CD=${opts.countdownSec};
+var cancelled=false;
+
+/* ======== floating countdown badge ======== */
+var badge=document.createElement('div');
+badge.id='_badge';
+badge.style.cssText='position:fixed;top:20px;right:20px;z-index:2147483647;background:#1e293b;color:#e2e8f0;padding:12px 18px;border-radius:12px;font-family:system-ui,sans-serif;font-size:14px;box-shadow:0 8px 30px rgba(0,0,0,0.5);border:1px solid #334155;display:flex;align-items:center;gap:12px;cursor:default;user-select:none;';
+badge.innerHTML='<span style="font-size:28px;font-weight:900;color:#3b82f6;min-width:32px;text-align:center;" id="_n">'+CD+'</span><span style="color:#94a3b8;font-size:13px;">秒后开始 · 点击输入框</span><button id="_c" style="background:transparent;border:1px solid #475569;color:#94a3b8;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px;">取消</button>';
+document.body.appendChild(badge);
+document.getElementById('_c').onclick=function(){cancelled=true;badge.remove();};
+
+function tick(n){
+  if(cancelled)return;
+  if(n<=0){badge.remove();setTimeout(start,300);return;}
+  var e=document.getElementById('_n');
+  e.textContent=n;
+  e.style.transform='scale(1.3)';e.style.transition='transform .15s';
+  requestAnimationFrame(function(){e.style.transform='scale(1)';});
+  setTimeout(function(){tick(n-1);},1000);
+}
+tick(CD);
+
+/* ======== find input ======== */
+function getEl(){
+  var a=document.activeElement;
+  if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'||a.isContentEditable||a.getAttribute('contenteditable')==='true'))return a;
+  var cs=document.querySelectorAll('input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=checkbox]):not([type=radio]), textarea, [contenteditable=true]');
+  for(var i=0;i<cs.length;i++)if(cs[i].offsetParent)return cs[i];
+  return null;
+}
+
+/* ======== type one char ======== */
+function typeChar(el,ch){
+  return new Promise(function(rs){
+    var d=Math.floor(Math.random()*(DMAX-DMIN+1))+DMIN;
+    setTimeout(function(){
+      el.focus();
+      var tag=el.tagName;
+      var isInput=tag==='INPUT'||tag==='TEXTAREA';
+
+      var ke=function(type){
+        try{el.dispatchEvent(new KeyboardEvent(type,{key:ch,bubbles:true,cancelable:true,composed:true}));}catch(e){}
+      };
+      ke('keydown');ke('keypress');
+
+      if(isInput){
+        var desc=Object.getOwnPropertyDescriptor(
+          tag==='INPUT'?HTMLInputElement.prototype:HTMLTextAreaElement.prototype,'value'
+        );
+        var cur='';
+        try{cur=(desc&&desc.get?desc.get.call(el):el.value)||'';}catch(e){}
+        if(desc&&desc.set){desc.set.call(el,cur+ch);}else{el.value=cur+ch;}
+        var len=(el.value||'').length;
+        if(typeof el.selectionStart==='number')el.selectionStart=el.selectionEnd=len;
+      }else{
+        try{document.execCommand('insertText',false,ch);}catch(e){
+          var tn=document.createTextNode(ch);
+          var sel=window.getSelection();
+          if(sel.rangeCount){
+            var r=sel.getRangeAt(0);r.deleteContents();r.insertNode(tn);
+            r.setStartAfter(tn);r.collapse(true);
+          }else{el.appendChild(tn);}
+        }
+      }
+
+      try{el.dispatchEvent(new InputEvent('input',{inputType:'insertText',data:ch,bubbles:true,cancelable:true,composed:true}));}catch(e){
+        el.dispatchEvent(new Event('input',{bubbles:true}));
+      }
+      ke('keyup');
+      rs();
+    },d);
+  });
+}
+
+/* ======== main ======== */
+async function start(){
+  var el=getEl();
+  if(!el){alert('⚠ 未找到输入框，请先点击目标输入框后重新运行脚本');return;}
+  el.focus();
+  var chars=[...T];
+  for(var i=0;i<chars.length;i++){
+    if(cancelled)break;
+    await typeChar(el,chars[i]);
+  }
+  el.dispatchEvent(new Event('change',{bubbles:true}));
+  console.log('✅ 输入完成，共'+T.length+'字');
+}
+})();`
+    );
+  }
+
+  function generateConsoleScript() {
+    var text = contentInput.value;
+    if (!text.trim()) {
+      showStatus('<span>⚠️</span> 请先输入要模拟键入的内容', 'warning');
+      contentInput.focus();
+      return;
+    }
+
+    var script = buildConsoleScript(text);
+    navigator.clipboard.writeText(script).then(function() {
+      var btn = document.getElementById('genBtn');
+      btn.textContent = '✅ 已复制';
+      btn.className = 'btn btn-success';
+      setTimeout(function() {
+        btn.textContent = '生成并复制控制台脚本';
+        btn.className = 'btn btn-primary';
+      }, 2500);
+      showStatus(
+        '<span>✅</span> <strong>脚本已复制到剪贴板！</strong><br>' +
+        '切换到目标网页 → 按 F12 打开控制台 → 粘贴并回车运行',
+        'success'
+      );
+    }).catch(function() {
+      showStatus('<span>❌</span> 复制失败，请重试或展开下方查看脚本手动复制', 'warning');
+    });
+  }
+
+  function copyTextOnly() {
+    var text = contentInput.value;
+    if (!text.trim()) {
+      showStatus('<span>⚠️</span> 没有可复制的内容', 'warning');
+      return;
+    }
+    navigator.clipboard.writeText(text).then(function() {
+      showStatus('<span>✅</span> 文本已复制（可用 Ctrl+V 尝试直接粘贴）', 'info');
+    }).catch(function() {
+      showStatus('<span>❌</span> 复制失败', 'warning');
+    });
+  }
+
+  updatePreview();
+</script>
+
+</body>
+</html>
